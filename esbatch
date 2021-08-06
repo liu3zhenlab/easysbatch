@@ -1,0 +1,410 @@
+#!/usr/bin/perl -w
+# Sanzhen Liu (liu3zhen@gmail.com)
+# 8/3/2021
+use strict;
+use warnings;
+use Term::ANSIColor qw(:constants);
+#use FindBin;
+#use lib "$FindBin::Bin/lib"; 
+use File::Temp;
+use Getopt::Long;
+
+my $current_version = "0.0.1";
+
+my $prefix = "aj";
+my ($mem, $time, $inlist, $threads, $cmd, $version, $help);
+my $indir = ".";
+my $outdir = ".";
+my ($inpattern, $in2out);
+my $opt4in = "";
+my $opt4out = "";
+my (@opt4var, @varPara);
+my $fixPara = "";
+my ($preset, $presetDB);
+my $inposition;
+my $opt4in2 = "";
+my $in2;
+my $submit;
+my $result = &GetOptions(
+             "cmd=s"       => \$cmd,
+			 "mem=s"       => \$mem,
+             "time=s"      => \$time,
+			 "threads=i"   => \$threads,
+			 "inlist=s"    => \$inlist,
+			 "prefix=s"    => \$prefix,
+			 "indir=s"     => \$indir,
+			 "inpattern=s" => \$inpattern,
+			 "in2=s"       => \$in2,
+			 "opt4in2=s"   => \$opt4in2,
+			 "outdir=s"    => \$outdir,
+			 "preset=s"    => \$preset,
+			 "presetDB=s"  => \$presetDB,
+			 "opt4in=s"    => \$opt4in,
+			 "opt4out=s"   => \$opt4out,
+			 "fixPara=s"   => \$fixPara,
+			 "opt4var=s@"  => \@opt4var,
+			 "varPara=s@"  => \@varPara,
+			 "in2out=s"    => \$in2out,
+			 "inposition=s"=> \$inposition,
+			 "submit"      => \$submit,
+			 "version|v"   => \$version,
+			 "help|h"      => \$help
+);
+
+### version
+if ($version) {
+	print STDERR RED, "$current_version\n", RESET;
+	exit;
+}
+
+### print help information if errors occur:
+if ($help) {
+	&errINF;
+}
+
+###############################################
+### required parameters
+###############################################
+if ((!defined $inlist) and (!defined $inpattern)) {
+	print STDERR RED, "either --inlist or --inpattern must be provided\n", RESET;
+	&errINF;
+}
+
+if ((defined $inposition) and ($inposition ne "first") and ($inposition ne "last")) {
+	print STDERR RED, "$inposition must be either first or last\n", RESET;
+	exit;
+}
+
+if (!defined $cmd) {
+	print STDERR RED, "--cmd is required\n", RESET;
+	&errINF;
+}
+
+### check if the cmd works
+&cmd_check($cmd);
+
+###############################################
+# read inlist or create inlist based on inpattern
+###############################################
+if (defined $inlist) {
+	print STDERR "$inlist (--inlist) is used\n";
+} elsif (defined $inpattern) {
+	#$inlist = File::Temp->new(UNLINK => 0, SUFFIX => '.tmp');
+	$inlist = $prefix.".inlist2sbatch.txt";
+	`find $indir -type f | grep $inpattern > $inlist`;
+	print STDERR RED, "--inlist is generated based on\n", RESET;
+	print STDERR "o --indir $indir\n";
+	print STDERR "o --inpattern $inpattern\n";
+}
+
+### determine line number in --inlist
+my $list_num = 0;
+open(IN, $inlist) || die;
+while (<IN>) {
+	chomp;
+	$list_num++;
+}
+close IN;
+
+if ($list_num == 0) {
+	print STDERR "no information in the input\n";
+	exit;
+}
+
+###############################################
+### output diretory
+###############################################
+if (!-d $outdir) {
+	`mkdir $outdir`;
+} else {
+	if ($outdir ne ".") {
+		print STDERR RED, "warning: $outdir exists\n", RESET;
+	}
+}
+
+###############################################
+### variable parameters:
+###############################################
+my $var_para_info = "";
+if ($#varPara >= 0) {
+	if ($#opt4var != $#varPara) {	
+		print STDERR RED, "--varPara and --opt4var are not paired in the command\n", RESET;
+	} else {
+		for(my $i=0; $i<=$#varPara; $i++) {
+			my $varpara_str = $opt4var[$i]." ".$varPara[$i]." ";
+			$var_para_info .= $varpara_str;
+		}
+	}
+}
+
+###############################################
+### preset
+###############################################
+if (defined $preset) {
+	if (defined $presetDB) {
+		if (-f $presetDB) {
+			my ($preset_para, %preset_para);
+			$preset_para = preset_read($presetDB, $preset);
+			%preset_para = %{$preset_para};
+			
+			if (exists $preset_para{inposition}) {
+				$inposition = $preset_para{inposition};
+			}
+
+			if (exists $preset_para{opt4in}) {
+				$opt4in  = $preset_para{opt4in};
+			}
+
+			if (exists $preset_para{opt4out}) {
+				 $opt4out= $preset_para{opt4out};
+			}
+
+			if (exists $preset_para{in2out}) {
+				 $in2out = $preset_para{in2out};
+			}
+
+			if (exists $preset_para{fixPara}) {
+				$fixPara = $preset_para{fixPara};
+			}
+
+			# mem
+			if (!defined $mem and exists $preset_para{mem}) {
+				$mem = $preset_para{mem};
+			}
+			# time
+			if (!defined $time and exists $preset_para{time}) {
+				$time = $preset_para{time};
+			}
+			# threads
+			if (!defined $threads and exists $preset_para{threads}) {
+				$threads = $preset_para{threads};
+			}
+		} else {
+			print STDERR RED, "$preset does not exist\n", RESET;
+		}
+	} else {
+		print STDERR RED, "--presetDB is needed\n", RESET;
+	}
+}
+
+###############################################
+### default slurm setting values:
+###############################################
+if (!defined $mem) {
+	$mem = "8g"
+} else {
+	if ($mem =~ /^\d+$/) {
+		$mem = $mem."g";
+	}
+}
+$time = "1-00:00:00" if (!defined $time);
+$threads = 1 if (!defined $threads);
+
+###############################################
+### create sbatch file
+###############################################
+my $sbfile = $prefix.".sbatch";
+open(OUT, ">", $sbfile) || die;
+print OUT "#!/bin/bash\n";
+print OUT "#SBATCH --array=1-$list_num\n";
+print OUT "#SBATCH --mem-per-cpu=$mem\n";
+print OUT "#SBATCH --time=$time\n";
+print OUT "#SBATCH --cpus-per-task=$threads\n";
+print OUT "in=\`head -n \$SLURM_ARRAY_TASK_ID $inlist | tail -n 1\`\n";
+
+###############################################
+### input 2 (in2)
+###############################################
+my $in2_info = "";
+if (defined $in2) {
+	if ($in2 =~ /^s\//) {
+		print OUT "in2=\`echo \$in | sed \'$in2\'\`\n";
+	} else {
+		print OUT "in2=$in2\n";
+	}
+	$in2_info = "\$opt4in2 \\\$in2";
+}
+
+###############################################
+### output
+###############################################
+my $output_info="$outdir\/\$out";
+if ($in2out) {
+	print OUT "out=\`echo \$in \| sed \'s\/\.\*\\\/\/\/g\' \| sed \'$in2out\'\`\n";
+} else {
+	$output_info = ""
+}
+
+###############################################
+### command line:
+###############################################
+my $cmd_string;
+if (!defined $inposition) {
+	$cmd_string = "$cmd $fixPara $var_para_info $opt4in \$in $in2_info $opt4out $output_info\n";
+} elsif ($inposition eq "first") {
+	$cmd_string = "$cmd $opt4in \$in $in2_info $fixPara $var_para_info $opt4out $output_info\n";
+} elsif ($inposition eq "last") {
+	if ($opt4out eq ">") {
+		$cmd_string = "$cmd $fixPara $var_para_info $opt4in \$in $in2_info $opt4out $output_info\n";
+	} else {
+		$cmd_string = "$cmd $fixPara $var_para_info $opt4out $output_info $opt4in \$in $in2_info\n";
+	}
+}
+
+$cmd_string =~ s/ +/ /g; # remove redundant spaces
+my $formated_cmd_line = cmd_print($cmd_string);  # print to STDERR
+#`cat $sbfile`;
+print OUT $formated_cmd_line;
+close OUT;
+
+# submit the job
+if ($submit) {
+	`sbatch $sbfile`;
+	print STDERR RED, "$sbfile has been submitted\n", RESET;
+} else {
+	print STDERR RED, "No slurm submission\n";
+	print STDERR RED, "Check the sbatch code in $sbfile\n", RESET;
+}
+###############################################
+# module: errINF
+###############################################
+sub errINF {
+    print <<EOF;
+    Usage: perl $0 --inlist <path_to_input_files> --cmd <command and parater> [options]
+    [Options]
+      --inlist* <file>    a file lists input files with one file per row, including path
+                          required if --inpattern is not input
+      --indir <str>       path to input data if --inlist is not provided (.)
+      --inpattern* <str>  regular expression pattern to filter files in --indir
+                          required if --inlist is not input
+      --cmd* <str>        command (e.g., gzip); required
+      --presetDB <file>   file to store preset parameters for one or multiple analyses
+                          see below for an example for one analysis: mo_star0_se
+      --preset <str>      name of a certain analysis in the --presetDB file
+                          for the example case, mo_star0_se should be used
+      --mem <num>         Gb memory requested (8g)
+      --time <time>       running time requested; (1-00:00:00)
+      --threads <num>     number of threads (4)
+      --prefix <str>      prefix for output (aj)
+      --inposition <str>  the position of input parameters relative to other parameters in the command line
+                          default is at the second to the last
+                          only "first" and "last" are the options.
+      --opt4in <str>      the option for input used in --cmd program (e.g., -i), none by default 
+      --in2 <str>         the 2nd input; assuming the same directory as --indir or files in --inlist
+                          if in s///g format, the replacement will be applied on 1st input to generate 2nd input
+      --opt4in2 <str>     the option for 2nd input (--in2), none by default
+      --outdir <str>      path of output data; to be created if not existed. (.) 
+      --opt4out <str>     the option for output in --cmd program (e.g., -o or >), none by default
+      --fixPara <str>     string for parameters with fixed values for --cmd, none by default
+      --varPara <str>     variable parameter; multiple invocations allowed
+      --opt4var <str>     the option for --varPara; equal number invocations as --varPara
+                          if multiple invocations exist, first --varPara is paired with first --opt4var, and so on.
+      --in2out <str>      the replacement to change input name to output name via the program of "sed"
+                          (e.g., s/fq\$/sam/)
+      --submit            submit slurm job if specified
+      --version           version information
+      --help              help information
+
+-------------------------------
+presetDB example:
+filename: mo_star0_se.para
+-------------------------------
+preset: mo_star0_se
+mem: 16g
+time: 1-00:00:00
+threads: 4
+inposition: first
+opt4in: --readFilesIn 
+opt4out: --outFileNamePrefix
+in2out: s/[fastq\$\|fq\$\]//
+fixPara: --alignIntronMax 3000
+note:
+===
+-------------------------------
+EOF
+exit;
+}
+
+###############################################
+# module: check command availability
+###############################################
+sub cmd_check {
+	my $in_cmd = shift;
+	my $cmdPath=`which $in_cmd 2>/dev/null`;
+	if (!$cmdPath) {# not founded
+		print STDERR RED, "  $in_cmd is not found\n", RESET;
+		#print STDERR RED, "Exit\n", RESET;
+		exit;
+	}
+}
+
+#preset_read($presetDB, $preset);
+###############################################
+# module: preset_read
+###############################################
+sub preset_read {
+# read preset file
+	my ($inpreset_file, $inpreset_name) = @_;
+	my %outpreset_para;
+	open(PRESET, "<", $inpreset_file) || die;
+	while (<PRESET>) {
+		chomp;
+		if (/^preset: ?(.+)$/) {
+			my $preset_name = $1;
+			$preset_name =~ s/ //g;
+			if ($preset_name eq $inpreset_name) {
+				do {
+					$_ = <PRESET>;
+					if (/(\S+): ?(.+)$/) {
+						#print STDERR "$1\n$2\n";
+						$outpreset_para{$1} = $2;
+					}
+				} until (/^===/);
+				#exit;
+			}
+		}
+	}
+	close PRESET;
+	return \%outpreset_para;
+}
+
+###############################################
+# module: print cmd
+###############################################
+sub cmd_print {
+	my $format_cmd = "";
+	my $has_stored = 0;
+	my $in_cmd_str = shift;
+	my @cmd_str = split(/ /, $in_cmd_str);
+	my $line_len = 0;
+	my $line = "";
+	my $rowcount = 0;
+	my $dent_space = "";
+	foreach (@cmd_str) {
+		if ($has_stored) {
+			$dent_space = "    ";
+		}
+		$rowcount++;
+		$line .= $_;
+		if ($rowcount == $#cmd_str + 1) {
+			#print STDERR "$dent_space$line\n";
+			$format_cmd .= "$dent_space$line\n";
+			$has_stored = 1;
+		} else {
+			my $str_len = length($_) + 1;
+			$line_len += $str_len;
+			if ($line_len >=  80) {
+				$line .= " \\\n";
+				#print STDERR "$dent_space$line";
+				$format_cmd .= "$dent_space$line";
+				$has_stored = 1;
+				$line = "";
+				$line_len = 0;
+			} else {
+				$line .= " ";
+			}
+		}
+	}
+	return $format_cmd;
+}
+

@@ -1,0 +1,11 @@
+preset: mo_star0_se
+mem: 16g
+time: 1-00:00:00
+threads: 4
+inposition: first
+opt4in: --readFilesIn 
+opt4out: --outFileNamePrefix
+in2out: s/[fastq$|fq$]//
+fixPara: --alignIntronMax 3000 --outSAMattrIHstart 0 --outSAMmultNmax 1 --outSAMstrandField intronMotif --outFilterIntronMotifs RemoveNoncanonicalUnannotated --outSAMtype BAM SortedByCoordinate --quantMode GeneCounts --outFilterMismatchNmax 1 --outFilterMismatchNoverLmax 0.01 --outFilterMatchNmin 60 --outSJfilterReads Unique --outFilterMultimapNmax 1 --outFilterMultimapScoreRange 2 --outSAMmapqUnique 60 --outFilterMatchNminOverLread 0.98
+note: STAR alignment for fungal RNA-Seq of fungal strains identical or highly similar to the reference strain
+===
