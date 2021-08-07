@@ -6,7 +6,7 @@ To submit slurm jobs in an array manner is a good way to management running job 
 
 ## Exampels
 ### case 1: gzip a set of files
-task: is to gzip \*fastq files in the directory of data
+task: is to gzip \*fastq files in the directory of data  
 One way is to generate a list of input files and then run esbatch:
 ```
 ls -1 data/*fastq > fqlist
@@ -16,7 +16,7 @@ The other way is to generate the file list and run esbatch at the same time:
 ```
 esbatch --indir data --inpattern fastq$ --cmd gzip --submit
 ```
-`--submit` is specified for the slurm submission. Without `--submit`, only submission script is generated. By default, the prefix "aj" is used and aj.sbatch is generated. You can double check the code in aj.sbatch and submit it manually through the following script.
+`--submit` is specified for the slurm submission. Without `--submit`, only submission script is generated. By default, the prefix "aj" is used and the submission script aj.sbatch is generated. The code in aj.sbatch can be double checked or modified and submit it manually through the following script.
 ```
 sbatch aj.sbatch
 ```
