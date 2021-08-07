@@ -16,7 +16,7 @@ esbatch --inlist --cmd gzip --submit
 ```
 esbatch --indir data --inpattern fastq$ --cmd gzip --submit
 ```
-`--submit` is specified for the slurm submission. Without `--submit`, only submission script is generated. By default, the prefix "aj" is used and the submission script aj.sbatch is generated. The code in aj.sbatch can be double checked or modified and submit it manually through the following script.
+`--submit` is specified for the slurm submission. Without `--submit`, only submission script is generated. By default, the prefix "aj" is used and the submission script aj.sbatch is generated. The code in aj.sbatch can be double checked or modified and be submitted manually through the following script.
 ```
 sbatch aj.sbatch
 ```
