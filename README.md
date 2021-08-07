@@ -22,7 +22,9 @@ sbatch aj.sbatch
 ```
 ### case 2: star alignment
 **task**: to align multiple single-end RNA-Seq datasets to a reference genome and count reads per gene  
-We use `--preset mo_star0_se` in this case. The command will read a preset parameter file. The file can be supplied by using --presetDB. In this example, [mo_star0_se.para](lib/mo_star0_se.para) is used. Below shows the content of the file. In this paramter file, information starts form preset and ends with "===". If `--presetDB` is not specified, the program will search `mo_star0_se.para` in the subdirectory of `lib` under the directory of the main script `esbatch`.
+We use `--preset mo_star0_se` to use preset parameter stored in the parameter file [mo_star0_se.para](lib/mo_star0_se.para). The file can be supplied by using `--presetDB <path>/mo_star0_se.para`. If `--presetDB` is not specified, the program will search `mo_star0_se.para` in the subdirectory of `lib` under the directory containing the main script `esbatch`.
+
+Below shows the content of [mo_star0_se.para](lib/mo_star0_se.para), in which information starts form preset and ends with "===".
 ```
 preset: mo_star0_se
 mem: 16g
