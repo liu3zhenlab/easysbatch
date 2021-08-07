@@ -4,10 +4,27 @@ scripts and parameter documents for slurm array submissions
 ## Background
 To submit slurm jobs in an array manner is a good way to management running job on the slurm system. However, to submit array jobs take time to organize codes and input files. The design of the script "esbatch" is to make the procedure easier. In addition, we think it is necessary to document parameters for regular analyses so those parameters can be repeatedly and consistently used. Therefore, we develop this easy-sbatch (esbatch) script and prepare parameter documents for regular analyses.  
 
-## Usages of esbatch
+## Exampels
+### case 1: gzip a set of files
+task: is to gzip \*fastq files in the directory of data
+One way is to generate a list of input files and then run esbatch:
 ```
-Usage: perl ./esbatch --inlist <path_to_input_files> --cmd <command and parater> [options]
-    [Options]
+ls -1 data/*fastq > fqlist
+esbatch --inlist --cmd gzip --submit
+```
+The other way is to generate the file list and run esbatch at the same time:
+```
+esbatch --indir data --inpattern fastq$ --cmd gzip --submit
+```
+`--submit` is specified for the slurm submission. Without `--submit`, only submission script is generated. By default, the prefix "aj" is used and aj.sbatch is generated. You can double check the code in aj.sbatch and submit it manually through the following script.
+```
+sbatch aj.sbatch
+```
+### case 2: 
+
+## Full usages of esbatch
+```
+Usage: esbatch --inlist <path_to_input_files> --cmd <command and parater> [options]
       --inlist* <file>    a file lists input files with one file per row, including path
                           required if --inpattern is not input
       --indir <str>       path to input data if --inlist is not provided (.)
@@ -41,3 +58,8 @@ Usage: perl ./esbatch --inlist <path_to_input_files> --cmd <command and parater>
       --version           version information
       --help              help information
 ```
+## BUG REPORT
+Please report any bugs or suggestion on github or by email to Sanzhen Liu (liu3zhen@gmail.com).
+
+## LICENSE
+The script and parameter documents are distributed under MIT licence.
