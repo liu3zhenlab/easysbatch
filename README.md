@@ -16,7 +16,7 @@ esbatch --inlist --cmd gzip --submit
 ```
 esbatch --indir data --inpattern fastq$ --cmd gzip --submit
 ```
-`--submit` is specified for the slurm submission. Without `--submit`, only submission script is generated. By default, "aj" is the prefix and the submission script `aj.sbatch` is generated. The code in `aj.sbatch` can be double checked or modified and be submitted manually through the following script.
+`--submit` is specified for the slurm submission. Without `--submit`, only submission script is generated. By default, "aj" is the prefix and the submission script `aj.sbatch` is generated. The code in `aj.sbatch` can be double checked or modified and then submitted manually through the following script.
 ```
 sbatch aj.sbatch
 ```
@@ -49,15 +49,17 @@ protocol=mo_star0_se
 fq_dir=<path-to-fastq>
 fq_pattern=.fq$
 esbatch \
-	--indir $fq_dir \
-	--inpattern $fq_pattern \
-	--cmd $star_cmd \
-	--preset $protocol \
-	--varPara $star_db \
-	--opt4var "--genomeDir" \
-      --submit
+    --indir $fq_dir \
+    --inpattern $fq_pattern \
+    --cmd $star_cmd \
+    --preset $protocol \
+    --varPara $star_db \
+    --opt4var "--genomeDir" \
+    --submit
 ```
 In addition, the parameter `--varPara` allows to add additional parameters that are not with fixed values. In this case, the indexed reference is add here. `--opt4var` is the option for this paramter. In the command, `--genomeDir <path-to-STAR-indexed database>` will be shown.
+
+**Notes**: For paired-end (PE) read alignments, `--in2` can be used to add the 2nd read file. `--in2` could be a file or the replacement code (e.g., s/R1.pair/R2.pair/) to generate the 2nd input by making a change from the 1st input.  
 
 ## Full usages of esbatch
 ```
