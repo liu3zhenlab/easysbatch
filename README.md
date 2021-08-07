@@ -16,13 +16,13 @@ esbatch --inlist --cmd gzip --submit
 ```
 esbatch --indir data --inpattern fastq$ --cmd gzip --submit
 ```
-`--submit` is specified for the slurm submission. Without `--submit`, only submission script is generated. By default, the prefix "aj" is used and the submission script `aj.sbatch` is generated. The code in `aj.sbatch` can be double checked or modified and be submitted manually through the following script.
+`--submit` is specified for the slurm submission. Without `--submit`, only submission script is generated. By default, "aj" is the prefix and the submission script `aj.sbatch` is generated. The code in `aj.sbatch` can be double checked or modified and be submitted manually through the following script.
 ```
 sbatch aj.sbatch
 ```
 ### case 2: star alignment
 **task**: to align multiple single-end RNA-Seq datasets to a reference genome and count reads per gene  
-We use `--preset mo_star0_se` to use preset parameter stored in the parameter file [mo_star0_se.para](lib/mo_star0_se.para). The file can be supplied by using `--presetDB <path>/mo_star0_se.para`. If `--presetDB` is not specified, the program will search `mo_star0_se.para` in the subdirectory of `lib` under the directory containing the main script `esbatch`.
+We use `--preset mo_star0_se` to apply preset parameters stored in the parameter file [mo_star0_se.para](lib/mo_star0_se.para). The file can be supplied by using `--presetDB <path>/mo_star0_se.para`. If `--presetDB` is not specified, the program will search `mo_star0_se.para` in the `lib` subdirectory  under the directory containing the main script `esbatch`.
 
 Below shows the content of [mo_star0_se.para](lib/mo_star0_se.para), in which information starts form preset and ends with "===".
 ```

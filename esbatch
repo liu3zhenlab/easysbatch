@@ -53,7 +53,7 @@ my $result = &GetOptions(
 
 ### version
 if ($version) {
-	&errprint("$current_version");
+	&message_print("$current_version");
 	exit;
 }
 
@@ -66,17 +66,17 @@ if ($help) {
 ### required parameters
 ###############################################
 if ((!defined $inlist) and (!defined $inpattern)) {
-	&errprint("either --inlist or --inpattern must be provided");
+	&message_print("either --inlist or --inpattern must be provided");
 	&errINF;
 }
 
 if ((defined $inposition) and ($inposition ne "first") and ($inposition ne "last")) {
-	&errprint("$inposition must be either first or last");
+	&message_print("$inposition must be either first or last");
 	exit;
 }
 
 if (!defined $cmd) {
-	&errprint("--cmd is required");
+	&message_print("--cmd is required");
 	&errINF;
 }
 
@@ -92,7 +92,7 @@ if (defined $inlist) {
 	#$inlist = File::Temp->new(UNLINK => 0, SUFFIX => '.tmp');
 	$inlist = $prefix.".inlist2sbatch.txt";
 	`find $indir -type f | grep $inpattern > $inlist`;
-	&errprint("--inlist is generated based on");
+	&message_print("--inlist is generated based on");
 	print STDERR "o --indir $indir\n";
 	print STDERR "o --inpattern $inpattern\n";
 }
@@ -107,7 +107,7 @@ while (<IN>) {
 close IN;
 
 if ($list_num == 0) {
-	&errprint_quit("no information in the input");
+	&message_print_quit("no information in the input");
 }
 
 ###############################################
@@ -117,7 +117,7 @@ if (!-d $outdir) {
 	`mkdir $outdir`;
 } else {
 	if ($outdir ne ".") {
-		&errprint("warning: $outdir exists");
+		&message_print("warning: $outdir exists");
 	}
 }
 
@@ -127,7 +127,7 @@ if (!-d $outdir) {
 my $var_para_info = "";
 if ($#varPara >= 0) {
 	if ($#opt4var != $#varPara) {	
-		&errprint("--varPara and --opt4var are not paired in the command");
+		&message_print("--varPara and --opt4var are not paired in the command");
 	} else {
 		for(my $i=0; $i<=$#varPara; $i++) {
 			my $varpara_str = $opt4var[$i]." ".$varPara[$i]." ";
@@ -146,10 +146,10 @@ if (defined $preset) {
 		if (-d $lib) {
 			$presetDB = $lib.$preset.".para";
 			if (!-f $presetDB) {
-				&errprint_quit("--presetDB was not provided and $preset.para was not found in $lib");
+				&message_print_quit("--presetDB was not provided and $preset.para was not found in $lib");
 			}
 		} else {
-			&errprint_quit("--presetDB was not provided and $lib does not exist");
+			&message_print_quit("--presetDB was not provided and $lib does not exist");
 		}
 	}
 
@@ -191,7 +191,7 @@ if (defined $preset) {
 			$threads = $preset_para{threads};
 		}
 	} else {
-		&errprint_quit("$presetDB was not found");
+		&message_print_quit("$presetDB was not found");
 	}
 }
 
@@ -230,7 +230,7 @@ if (defined $in2) {
 	} else {
 		print OUT "in2=$in2\n";
 	}
-	$in2_info = "\$opt4in2 \\\$in2";
+	$in2_info = "$opt4in2 \$in2";
 }
 
 ###############################################
@@ -268,9 +268,9 @@ close OUT;
 # submit the job
 if ($submit) {
 	`sbatch $sbfile`;
-	&errprint("$sbfile has been submitted");
+	&message_print("$sbfile has been submitted");
 } else {
-	&errprint("$sbfile has been generated but not submitted yet");
+	&message_print("$sbfile has been generated but not submitted yet");
 }
 ###############################################
 # module: errINF
@@ -297,18 +297,18 @@ sub errINF {
                           default is at the second to the last
                           only "first" and "last" are the options.
       --opt4in <str>      the option for input used in --cmd program (e.g., -i), none by default 
+      --opt4in2 <str>     the option for 2nd input (--in2), none by default
       --in2 <str>         the 2nd input; assuming the same directory as --indir or files in --inlist
                           if in s///g format, the replacement will be applied on 1st input to generate 2nd input
-      --opt4in2 <str>     the option for 2nd input (--in2), none by default
       --outdir <str>      path of output data; to be created if not existed. (.) 
       --opt4out <str>     the option for output in --cmd program (e.g., -o or >), none by default
       --fixPara <str>     string for parameters with fixed values for --cmd, none by default
-      --varPara <str>     variable parameter; multiple invocations allowed
       --opt4var <str>     the option for --varPara; equal number invocations as --varPara
                           if multiple invocations exist, first --varPara is paired with first --opt4var, and so on.
+      --varPara <str>     variable parameter; multiple invocations allowed
       --in2out <str>      the replacement to change input name to output name via the program of "sed"
                           (e.g., s/fq\$/sam/)
-      --submit            submit slurm job if specified
+      --submit            submit the slurm job if specified
       --version           version information
       --help              help information
 
@@ -339,7 +339,7 @@ sub cmd_check {
 	my $in_cmd = shift;
 	my $cmdPath=`which $in_cmd 2>/dev/null`;
 	if (!$cmdPath) {# not founded
-		&errprint_quit("  $in_cmd is not found");
+		&message_print_quit("  $in_cmd is not found");
 	}
 }
 
@@ -372,7 +372,7 @@ sub preset_read {
 	if (%outpreset_para) {
 		return \%outpreset_para;
 	} else {
-		&errprint_quit("no preset match or no parameters in $inpreset_file"); 
+		&message_print_quit("no preset match or no parameters in $inpreset_file"); 
 	}
 }
 
@@ -417,14 +417,14 @@ sub cmd_print {
 }
 
 ###############################################
-# module: error message
+# module: message
 ###############################################
-sub errprint {
+sub message_print {
 	my $in_message = shift;
 	print STDERR RED, "$in_message\n", RESET;
 }
 
-sub errprint_quit {
+sub message_print_quit {
 	my $in_message = shift;
 	print STDERR RED, "$in_message\n", RESET;
 	exit;
