@@ -5,14 +5,14 @@ scripts and parameter documents for slurm array submissions
 To submit slurm jobs in an array manner is a good way to management running job on the slurm system. However, to submit array jobs take time to organize codes and input files. The design of the script "esbatch" is to make the procedure easier. In addition, we think it is necessary to document parameters for regular analyses so those parameters can be repeatedly and consistently used. Therefore, we develop this easy-sbatch (esbatch) script and prepare parameter documents for regular analyses.  
 
 ## Exampels
-### case 1: gzip a set of files
-task: is to gzip \*fastq files in the directory of data  
-One way is to generate a list of input files and then run esbatch:
+### case 1: gzip files
+**task**: is to gzip \*fastq files in the directory of data  
+*One way* is to generate a list of input files and then run esbatch:
 ```
 ls -1 data/*fastq > fqlist
 esbatch --inlist --cmd gzip --submit
 ```
-The other way is to generate the file list and run esbatch at the same time:
+*The other way* is to generate the file list and run esbatch at the same time:
 ```
 esbatch --indir data --inpattern fastq$ --cmd gzip --submit
 ```
@@ -20,7 +20,42 @@ esbatch --indir data --inpattern fastq$ --cmd gzip --submit
 ```
 sbatch aj.sbatch
 ```
-### case 2: 
+### case 2: star alignment
+**task**: to align multiple single-end RNA-Seq datasets to a reference genome and count reads per gene
+We use --preset mo_star0_se in this case. The command will read a preset parameter file. The file can be supplied by using --presetDB. In this example, [mo_star0_se.para](lib/mo_star0_se.para) is used. Below shows the content of the file. In this paramter file, information starts form preset and ends with "===". If --presetDB is not specified, the program will search `mo_star0_se.para` in the subdirectory of `lib` under the directory of the main script `esbatch`.
+```
+preset: mo_star0_se
+mem: 16g
+time: 1-00:00:00
+threads: 4
+inposition: first
+opt4in: --readFilesIn 
+opt4out: --outFileNamePrefix
+in2out: s/[fastq$|fq$]//
+fixPara: --alignIntronMax 3000 --outSAMattrIHstart 0 --outSAMmultNmax 1 ...
+note: STAR alignment for fungal RNA-Seq of fungal strains identical or highly similar to the reference strain
+===
+```
+**Note**:
+in2out specifies the replacement in an input file to generate an output filename or prefix.
+
+```
+#!/bin/bash
+star_cmd=STAR
+star_db=<path-to-STAR-indexed database>
+protocol=mo_star0_se
+fq_dir=<path-to-fastq>
+fq_pattern=.fq$
+esbatch \
+	--indir $fq_dir \
+	--inpattern $fq_pattern \
+	--cmd $star_cmd \
+	--preset $protocol \
+	--varPara $star_db \
+	--opt4var "--genomeDir" \
+      --submit
+```
+In addition, the parameter --varPara allows to add additional parameters that are not with fixed values. In this case, the indexed reference is add here. --opt4var is the option for this paramter. In the command, `--genomeDir <path-to-STAR-indexed database>` will be shown.
 
 ## Full usages of esbatch
 ```
