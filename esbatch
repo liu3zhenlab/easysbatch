@@ -4,8 +4,8 @@
 use strict;
 use warnings;
 use Term::ANSIColor qw(:constants);
-#use FindBin;
-#use lib "$FindBin::Bin/lib"; 
+use FindBin;
+use lib "$FindBin::Bin/lib"; 
 use File::Temp;
 use Getopt::Long;
 
@@ -53,7 +53,7 @@ my $result = &GetOptions(
 
 ### version
 if ($version) {
-	print STDERR RED, "$current_version\n", RESET;
+	&errprint("$current_version");
 	exit;
 }
 
@@ -66,17 +66,17 @@ if ($help) {
 ### required parameters
 ###############################################
 if ((!defined $inlist) and (!defined $inpattern)) {
-	print STDERR RED, "either --inlist or --inpattern must be provided\n", RESET;
+	&errprint("either --inlist or --inpattern must be provided");
 	&errINF;
 }
 
 if ((defined $inposition) and ($inposition ne "first") and ($inposition ne "last")) {
-	print STDERR RED, "$inposition must be either first or last\n", RESET;
+	&errprint("$inposition must be either first or last");
 	exit;
 }
 
 if (!defined $cmd) {
-	print STDERR RED, "--cmd is required\n", RESET;
+	&errprint("--cmd is required");
 	&errINF;
 }
 
@@ -92,7 +92,7 @@ if (defined $inlist) {
 	#$inlist = File::Temp->new(UNLINK => 0, SUFFIX => '.tmp');
 	$inlist = $prefix.".inlist2sbatch.txt";
 	`find $indir -type f | grep $inpattern > $inlist`;
-	print STDERR RED, "--inlist is generated based on\n", RESET;
+	&errprint("--inlist is generated based on");
 	print STDERR "o --indir $indir\n";
 	print STDERR "o --inpattern $inpattern\n";
 }
@@ -107,8 +107,7 @@ while (<IN>) {
 close IN;
 
 if ($list_num == 0) {
-	print STDERR "no information in the input\n";
-	exit;
+	&errprint_quit("no information in the input");
 }
 
 ###############################################
@@ -118,7 +117,7 @@ if (!-d $outdir) {
 	`mkdir $outdir`;
 } else {
 	if ($outdir ne ".") {
-		print STDERR RED, "warning: $outdir exists\n", RESET;
+		&errprint("warning: $outdir exists");
 	}
 }
 
@@ -128,7 +127,7 @@ if (!-d $outdir) {
 my $var_para_info = "";
 if ($#varPara >= 0) {
 	if ($#opt4var != $#varPara) {	
-		print STDERR RED, "--varPara and --opt4var are not paired in the command\n", RESET;
+		&errprint("--varPara and --opt4var are not paired in the command");
 	} else {
 		for(my $i=0; $i<=$#varPara; $i++) {
 			my $varpara_str = $opt4var[$i]." ".$varPara[$i]." ";
@@ -141,49 +140,58 @@ if ($#varPara >= 0) {
 ### preset
 ###############################################
 if (defined $preset) {
-	if (defined $presetDB) {
-		if (-f $presetDB) {
-			my ($preset_para, %preset_para);
-			$preset_para = preset_read($presetDB, $preset);
-			%preset_para = %{$preset_para};
-			
-			if (exists $preset_para{inposition}) {
-				$inposition = $preset_para{inposition};
-			}
-
-			if (exists $preset_para{opt4in}) {
-				$opt4in  = $preset_para{opt4in};
-			}
-
-			if (exists $preset_para{opt4out}) {
-				 $opt4out= $preset_para{opt4out};
-			}
-
-			if (exists $preset_para{in2out}) {
-				 $in2out = $preset_para{in2out};
-			}
-
-			if (exists $preset_para{fixPara}) {
-				$fixPara = $preset_para{fixPara};
-			}
-
-			# mem
-			if (!defined $mem and exists $preset_para{mem}) {
-				$mem = $preset_para{mem};
-			}
-			# time
-			if (!defined $time and exists $preset_para{time}) {
-				$time = $preset_para{time};
-			}
-			# threads
-			if (!defined $threads and exists $preset_para{threads}) {
-				$threads = $preset_para{threads};
+	if (!defined $presetDB) { # auto seach
+		my $script_path = $FindBin::Bin;
+		my $lib = $script_path."/lib/";
+		if (-d $lib) {
+			$presetDB = $lib.$preset.".para";
+			if (!-f $presetDB) {
+				&errprint_quit("--presetDB was not provided and $preset.para was not found in $lib");
 			}
 		} else {
-			print STDERR RED, "$preset does not exist\n", RESET;
+			&errprint_quit("--presetDB was not provided and $lib does not exist");
+		}
+	}
+
+	if (-f $presetDB) {
+		my ($preset_para, %preset_para);
+		$preset_para = preset_read($presetDB, $preset);
+		%preset_para = %{$preset_para};
+		
+		if (exists $preset_para{inposition}) {
+			$inposition = $preset_para{inposition};
+		}
+
+		if (exists $preset_para{opt4in}) {
+			$opt4in  = $preset_para{opt4in};
+		}
+
+		if (exists $preset_para{opt4out}) {
+			 $opt4out= $preset_para{opt4out};
+		}
+
+		if (exists $preset_para{in2out}) {
+			 $in2out = $preset_para{in2out};
+		}
+
+		if (exists $preset_para{fixPara}) {
+			$fixPara = $preset_para{fixPara};
+		}
+
+		# mem
+		if (!defined $mem and exists $preset_para{mem}) {
+			$mem = $preset_para{mem};
+		}
+		# time
+		if (!defined $time and exists $preset_para{time}) {
+			$time = $preset_para{time};
+		}
+		# threads
+		if (!defined $threads and exists $preset_para{threads}) {
+			$threads = $preset_para{threads};
 		}
 	} else {
-		print STDERR RED, "--presetDB is needed\n", RESET;
+		&errprint_quit("$presetDB was not found");
 	}
 }
 
@@ -260,10 +268,9 @@ close OUT;
 # submit the job
 if ($submit) {
 	`sbatch $sbfile`;
-	print STDERR RED, "$sbfile has been submitted\n", RESET;
+	&errprint("$sbfile has been submitted");
 } else {
-	print STDERR RED, "No slurm submission\n";
-	print STDERR RED, "Check the sbatch code in $sbfile\n", RESET;
+	&errprint("$sbfile has been generated but not submitted yet");
 }
 ###############################################
 # module: errINF
@@ -332,9 +339,7 @@ sub cmd_check {
 	my $in_cmd = shift;
 	my $cmdPath=`which $in_cmd 2>/dev/null`;
 	if (!$cmdPath) {# not founded
-		print STDERR RED, "  $in_cmd is not found\n", RESET;
-		#print STDERR RED, "Exit\n", RESET;
-		exit;
+		&errprint_quit("  $in_cmd is not found");
 	}
 }
 
@@ -356,7 +361,6 @@ sub preset_read {
 				do {
 					$_ = <PRESET>;
 					if (/(\S+): ?(.+)$/) {
-						#print STDERR "$1\n$2\n";
 						$outpreset_para{$1} = $2;
 					}
 				} until (/^===/);
@@ -365,7 +369,11 @@ sub preset_read {
 		}
 	}
 	close PRESET;
-	return \%outpreset_para;
+	if (%outpreset_para) {
+		return \%outpreset_para;
+	} else {
+		&errprint_quit("no preset match or no parameters in $inpreset_file"); 
+	}
 }
 
 ###############################################
@@ -408,3 +416,17 @@ sub cmd_print {
 	return $format_cmd;
 }
 
+###############################################
+# module: error message
+###############################################
+sub errprint {
+	my $in_message = shift;
+	print STDERR RED, "$in_message\n", RESET;
+}
+
+sub errprint_quit {
+	my $in_message = shift;
+	print STDERR RED, "$in_message\n", RESET;
+	exit;
+}
+#
