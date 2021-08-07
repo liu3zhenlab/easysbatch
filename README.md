@@ -21,8 +21,8 @@ esbatch --indir data --inpattern fastq$ --cmd gzip --submit
 sbatch aj.sbatch
 ```
 ### case 2: star alignment
-**task**: to align multiple single-end RNA-Seq datasets to a reference genome and count reads per gene
-We use --preset mo_star0_se in this case. The command will read a preset parameter file. The file can be supplied by using --presetDB. In this example, [mo_star0_se.para](lib/mo_star0_se.para) is used. Below shows the content of the file. In this paramter file, information starts form preset and ends with "===". If --presetDB is not specified, the program will search `mo_star0_se.para` in the subdirectory of `lib` under the directory of the main script `esbatch`.
+**task**: to align multiple single-end RNA-Seq datasets to a reference genome and count reads per gene  
+We use `--preset mo_star0_se` in this case. The command will read a preset parameter file. The file can be supplied by using --presetDB. In this example, [mo_star0_se.para](lib/mo_star0_se.para) is used. Below shows the content of the file. In this paramter file, information starts form preset and ends with "===". If `--presetDB` is not specified, the program will search `mo_star0_se.para` in the subdirectory of `lib` under the directory of the main script `esbatch`.
 ```
 preset: mo_star0_se
 mem: 16g
@@ -37,7 +37,7 @@ note: STAR alignment for fungal RNA-Seq of fungal strains identical or highly si
 ===
 ```
 **Note**:
-in2out specifies the replacement in an input file to generate an output filename or prefix.
+`in2out` specifies the replacement in an input file to generate an output filename or prefix.
 
 ```
 #!/bin/bash
@@ -55,7 +55,7 @@ esbatch \
 	--opt4var "--genomeDir" \
       --submit
 ```
-In addition, the parameter --varPara allows to add additional parameters that are not with fixed values. In this case, the indexed reference is add here. --opt4var is the option for this paramter. In the command, `--genomeDir <path-to-STAR-indexed database>` will be shown.
+In addition, the parameter `--varPara` allows to add additional parameters that are not with fixed values. In this case, the indexed reference is add here. `--opt4var` is the option for this paramter. In the command, `--genomeDir <path-to-STAR-indexed database>` will be shown.
 
 ## Full usages of esbatch
 ```
