@@ -1,0 +1,17 @@
+{
+	"_comment": "preset: zm_bwamem_pe",
+	"_comment": "version: 0.1",
+	"_comment": "BWA mem alignment",
+	"_comment": "tested on 0.7.17-r1188",
+	"mem": "2g",
+	"time": "1-00:00:00",
+	"threads": "4",
+	"inposition": "last",
+	"opt4in": "",
+	"opt4out": ">",
+	"in2out": "s/.R1.pair.fq/\.sam/g",
+	"fixPara": {
+	"_comment": "BWA mem parameters",
+		"-t": "4",
+	}
+}

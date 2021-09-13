@@ -5,11 +5,11 @@ use strict;
 use warnings;
 use Term::ANSIColor qw(:constants);
 use FindBin;
-use lib "$FindBin::Bin/lib"; 
+use lib "$FindBin::Bin/libs"; 
 use File::Temp;
 use Getopt::Long;
 
-my $current_version = "0.0.1";
+my $current_version = "0.0.2";
 
 my $prefix = "aj";
 my ($mem, $time, $inlist, $threads, $cmd, $version, $help);
@@ -20,7 +20,7 @@ my $opt4in = "";
 my $opt4out = "";
 my (@opt4var, @varPara);
 my $fixPara = "";
-my ($preset, $presetDB);
+my $preset;
 my $inposition;
 my $opt4in2 = "";
 my $in2;
@@ -38,12 +38,11 @@ my $result = &GetOptions(
 			 "opt4in2=s"   => \$opt4in2,
 			 "outdir=s"    => \$outdir,
 			 "preset=s"    => \$preset,
-			 "presetDB=s"  => \$presetDB,
 			 "opt4in=s"    => \$opt4in,
 			 "opt4out=s"   => \$opt4out,
 			 "fixPara=s"   => \$fixPara,
-			 "opt4var=s@"  => \@opt4var,
 			 "varPara=s@"  => \@varPara,
+			 "opt4var=s@"  => \@opt4var,
 			 "in2out=s"    => \$in2out,
 			 "inposition=s"=> \$inposition,
 			 "submit"      => \$submit,
@@ -86,11 +85,12 @@ if (!defined $cmd) {
 ###############################################
 # read inlist or create inlist based on inpattern
 ###############################################
+my $timestr = time2string();
 if (defined $inlist) {
-	print STDERR "$inlist (--inlist) is used\n";
+	&message_print("note: $inlist (--inlist) is used");
 } elsif (defined $inpattern) {
 	#$inlist = File::Temp->new(UNLINK => 0, SUFFIX => '.tmp');
-	$inlist = $prefix.".inlist2sbatch.txt";
+	$inlist = $prefix.".".$timestr.".inlist2sbatch.txt";
 	`find $indir -type f | grep $inpattern > $inlist`;
 	&message_print("--inlist is generated based on");
 	print STDERR "o --indir $indir\n";
@@ -139,59 +139,75 @@ if ($#varPara >= 0) {
 ###############################################
 ### preset
 ###############################################
+my $preset_found = 0;
 if (defined $preset) {
-	if (!defined $presetDB) { # auto seach
+	if (!-f $preset) { # auto seach
 		my $script_path = $FindBin::Bin;
-		my $lib = $script_path."/lib/";
+		my $lib = $script_path."/libs/";
 		if (-d $lib) {
-			$presetDB = $lib.$preset.".para";
-			if (!-f $presetDB) {
-				&message_print_quit("--presetDB was not provided and $preset.para was not found in $lib");
+			$preset = $lib.$preset;
+			if (!-f $preset) {
+				if ($preset !~ /json$/) { # last effort for autosearch
+					$preset .= ".json";
+					if (!-f $preset) {
+						&message_print_quit("$preset was not found");
+					} else {
+						&message_print("Yeah! Preset $preset was found");
+						$preset_found =  1;
+					}
+				} else {
+					&message_print_quit("$preset was not found");
+				}
+			} else {
+				&message_print("Yeah! Preset $preset was found");
+				$preset_found =  1;
 			}
 		} else {
-			&message_print_quit("--presetDB was not provided and $lib does not exist");
-		}
-	}
-
-	if (-f $presetDB) {
-		my ($preset_para, %preset_para);
-		$preset_para = preset_read($presetDB, $preset);
-		%preset_para = %{$preset_para};
-		
-		if (exists $preset_para{inposition}) {
-			$inposition = $preset_para{inposition};
-		}
-
-		if (exists $preset_para{opt4in}) {
-			$opt4in  = $preset_para{opt4in};
-		}
-
-		if (exists $preset_para{opt4out}) {
-			 $opt4out= $preset_para{opt4out};
-		}
-
-		if (exists $preset_para{in2out}) {
-			 $in2out = $preset_para{in2out};
-		}
-
-		if (exists $preset_para{fixPara}) {
-			$fixPara = $preset_para{fixPara};
-		}
-
-		# mem
-		if (!defined $mem and exists $preset_para{mem}) {
-			$mem = $preset_para{mem};
-		}
-		# time
-		if (!defined $time and exists $preset_para{time}) {
-			$time = $preset_para{time};
-		}
-		# threads
-		if (!defined $threads and exists $preset_para{threads}) {
-			$threads = $preset_para{threads};
+			&message_print_quit("--preset does not exist");
 		}
 	} else {
-		&message_print_quit("$presetDB was not found");
+		$preset_found = 1;
+	}
+} 
+
+if ($preset_found) {
+	my ($preset_para, %preset_para);
+	$preset_para = json_read($preset);
+	%preset_para = %{$preset_para};
+		
+	if (exists $preset_para{inposition}) {
+		$inposition = $preset_para{inposition};
+	}
+
+	if (exists $preset_para{opt4in}) {
+		$opt4in  = $preset_para{opt4in};
+	}
+
+	if (exists $preset_para{opt4out}) {
+		 $opt4out= $preset_para{opt4out};
+	}
+
+	if (exists $preset_para{in2out}) {
+		 $in2out = $preset_para{in2out};
+	}
+
+	if (exists $preset_para{fixPara}) {
+		$fixPara = $preset_para{fixPara};
+	}
+
+	# mem
+	if (!defined $mem and exists $preset_para{mem}) {
+		$mem = $preset_para{mem};
+	}
+		
+	# time
+	if (!defined $time and exists $preset_para{time}) {
+		$time = $preset_para{time};
+	}
+	
+	# threads
+	if (!defined $threads and exists $preset_para{threads}) {
+		$threads = $preset_para{threads};
 	}
 }
 
@@ -211,7 +227,7 @@ $threads = 1 if (!defined $threads);
 ###############################################
 ### create sbatch file
 ###############################################
-my $sbfile = $prefix.".sbatch";
+my $sbfile = $prefix.".".$timestr.".sbatch";
 open(OUT, ">", $sbfile) || die;
 print OUT "#!/bin/bash\n";
 print OUT "#SBATCH --array=1-$list_num\n";
@@ -285,10 +301,7 @@ sub errINF {
       --inpattern* <str>  regular expression pattern to filter files in --indir
                           required if --inlist is not input
       --cmd* <str>        command (e.g., gzip); required
-      --presetDB <file>   file to store preset parameters for one or multiple analyses
-                          see below for an example for one analysis: mo_star0_se
-      --preset <str>      name of a certain analysis in the --presetDB file
-                          for the example case, mo_star0_se should be used
+      --preset <file>     present .json file or name to store preset parameters for an analysis; if the path is included, the file will be automatically searched
       --mem <num>         Gb memory requested (8g)
       --time <time>       running time requested; (1-00:00:00)
       --threads <num>     number of threads (4)
@@ -298,36 +311,19 @@ sub errINF {
                           only "first" and "last" are the options.
       --opt4in <str>      the option for input used in --cmd program (e.g., -i), none by default 
       --opt4in2 <str>     the option for 2nd input (--in2), none by default
-      --in2 <str>         the 2nd input; assuming the same directory as --indir or files in --inlist
+      --in2 <str>         the 2nd input; assuming the input is in the same directory as --indir or files in --inlist;
                           if in s///g format, the replacement will be applied on 1st input to generate 2nd input
-      --outdir <str>      path of output data; to be created if not existed. (.) 
+      --outdir <str>      path of output data; to be created if the path does not exist. (.)
       --opt4out <str>     the option for output in --cmd program (e.g., -o or >), none by default
       --fixPara <str>     string for parameters with fixed values for --cmd, none by default
-      --opt4var <str>     the option for --varPara; equal number invocations as --varPara
-                          if multiple invocations exist, first --varPara is paired with first --opt4var, and so on.
-      --varPara <str>     variable parameter; multiple invocations allowed
+      --varPara <str>     variable parameter; multiple calls allowed and equal number of calls as --opt4var
+      --opt4var <str>     the option for --varPara; equal number of calls as --varPara
+                          if multiple calls exist, first --varPara is paired with first --opt4var, and so on.
       --in2out <str>      the replacement to change input name to output name via the program of "sed"
                           (e.g., s/fq\$/sam/)
       --submit            submit the slurm job if specified
       --version           version information
       --help              help information
-
--------------------------------
-presetDB example:
-filename: mo_star0_se.para
--------------------------------
-preset: mo_star0_se
-mem: 16g
-time: 1-00:00:00
-threads: 4
-inposition: first
-opt4in: --readFilesIn 
-opt4out: --outFileNamePrefix
-in2out: s/[fastq\$\|fq\$\]//
-fixPara: --alignIntronMax 3000
-note:
-===
--------------------------------
 EOF
 exit;
 }
@@ -343,37 +339,58 @@ sub cmd_check {
 	}
 }
 
-#preset_read($presetDB, $preset);
 ###############################################
 # module: preset_read
 ###############################################
-sub preset_read {
+sub json_read {
 # read preset file
-	my ($inpreset_file, $inpreset_name) = @_;
+	my $inpreset_file = shift @_;
 	my %outpreset_para;
+	my $para_name;
+	my $para_content;
 	open(PRESET, "<", $inpreset_file) || die;
 	while (<PRESET>) {
 		chomp;
-		if (/^preset: ?(.+)$/) {
-			my $preset_name = $1;
-			$preset_name =~ s/ //g;
-			if ($preset_name eq $inpreset_name) {
-				do {
-					$_ = <PRESET>;
-					if (/(\S+): ?(.+)$/) {
-						$outpreset_para{$1} = $2;
-					}
-				} until (/^===/);
-				#exit;
-			}
+		if (/^\{$/) {
+			do {
+				$_ = <PRESET>; chomp;# go next
+				&skip_comment;
+				if (/\"(\S+)\" *: *\"(.*)\"/) {
+					$para_name = $1;
+					$para_content = $2;
+				} elsif (/\"(\S+)\" *: *\{/) {
+					$para_name = $1;
+					my @para_content = ();
+					do {
+						$_ = <PRESET>; chomp; # go next
+						&skip_comment;
+						if (/\"(\S+)\" *: *\"(.*)\"/) {
+							my $subpara = $1." ".$2;
+							push(@para_content, $subpara);			
+						}
+					} until (/^\}$/);
+					$para_content = join(" ", @para_content);
+				}
+
+				$outpreset_para{$para_name} = $para_content;
+			} until (/^\}$/);
 		}
 	}
 	close PRESET;
 	if (%outpreset_para) {
 		return \%outpreset_para;
 	} else {
-		&message_print_quit("no preset match or no parameters in $inpreset_file"); 
+		#&message_print_quit("no parameters in $inpreset_file"); 
 	}
+
+	###############################
+	sub skip_comment {
+	# module to skip comments
+		if (/\"_comment\"/) {
+			$_ = <PRESET>; chomp;
+		}
+	}
+	###############################
 }
 
 ###############################################
@@ -429,4 +446,14 @@ sub message_print_quit {
 	print STDERR RED, "$in_message\n", RESET;
 	exit;
 }
+
+##
+# time2string
 #
+sub time2string {
+	my $datestring = localtime();
+	$datestring =~ s/ //g;
+	$datestring =~ s/\://g;
+	return $datestring;
+}
+
