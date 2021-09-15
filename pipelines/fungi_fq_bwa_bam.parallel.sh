@@ -7,7 +7,10 @@ version=0.01;
 default_f1suffix='.R1.pair.fq';
 default_f2suffix='.R2.pair.fq';
 default_cpus=4;
-default_parser="/homes/liu3zhen/scripts/sam/samparser.bwa.pl";
+script_dir=`echo $0 | sed 's/[^\/]*\/[^\/]*$//g'` # remove file and the direct subdirectory
+default_parser=$script_dir"/utils/samparser.bwa.pl";
+default_aggregator=$script_dir"/utils/alignment.log.aggregate.pl";
+parser_para="-e 60 -m 5 100 --tail 5 100 --gap 10 --insert 100 600";
 
 RED='\033[0;31m'
 NC='\033[0m' # No Color
@@ -20,7 +23,8 @@ usage() {
 	echo "   -2: suffix of second pair of fastq ($default_f2suffix)" >&2
 	echo "   -c: number of cpus ($default_cpus)" >&2
 	echo "   -m: modules to load" >&2
-	echo "   -p: bwa alignment parser ($default_parser)" >&2;
+	echo "   -p: parser script for filtering bwa alignments ($default_parser)" >&2;
+	echo "   -a: aggregator script for merging parser log ($default_aggregator)" >&2;
 	echo "   -h: help information" >&2
 }
 
@@ -33,6 +37,7 @@ case $opt in
 	c) cpus=$OPTARG;;
 	p) parser=$OPTARG;;
 	m) modules+=($OPTARG);;
+	a) aggregator=$OPTARG;;
 	v) echo $version; exit;;
 	h) usage; exit;;
 \?) echo "Invalid options: -$OPTARG." >&2; exit;;
@@ -92,6 +97,11 @@ if [ -z $parser ]; then
 	parser=$default_parser;
 fi
 
+if [ -z $aggregator ]; then
+	aggregator=$default_aggregator;
+fi
+
+
 for module in "${modules[@]}"; do
 	module load $module;
 	if [ $? -eq 0 ]; then 
@@ -108,7 +118,7 @@ echo "    read 1: "$fq  >&2
 echo "    read 2: "$fq2  >&2
 
 # if fq are gzip files
-fq_extension="${fq##*.}"
+fq_extension="${fq##*.}"  # suffix
 if [ $fq_extension == "gz" ]; then
 	new_fq=`echo $fq | sed 's/.*\///g' | sed 's/.gz//g' | sed 's/^/./g'`;
 	new_fq2=`echo $fq2 | sed 's/.*\///g' | sed 's/.gz//g' | sed 's/^/./g'`;
@@ -143,10 +153,15 @@ echo -e "${red}reference db:${nc}" >&2
 echo "    $ref" >&2
 
 ### aln
-bwa mem -t $cpus $ref $fq $fq2 1>${out}.sam 2>${out}.aln.log
+bwaout=${out}.sam
+group_info="@RG\tID:${out}\tSM:${out}"
+echo $group_info
+bwa mem -t $cpus -R "$group_info" $ref $fq $fq2 1>${out}.sam 2>${out}.aln.log
 if [ $? -eq 1 ]; then
 	echo -e "${RED}ERROR${NC}: BWA alignment failed." >&2
-	rm $new_fq; rm $new_fq2;
+	if [ $fq_extension == "gz" ]; then
+		rm $new_fq; rm $new_fq2;
+	fi
 	exit;
 fi
 
@@ -155,15 +170,32 @@ if [ $fq_extension == "gz" ]; then
 	rm $new_fq; rm $new_fq2
 fi
 
+# split alignments
+naln=`wc -l ${bwaout} | sed 's/ .*//g'`;
+nlines=`expr $naln / $cpus`;
+split -d -l $nlines ${bwaout} ${bwaout}
+
+# tmp
+tmp_split_parser=${bwaout}.split.parse.tmp.sh
+echo "#!/bin/bash" > $tmp_split_parser
+for sam in ${bwaout}[0-9]*[0-9]; do
+	echo -e perl ${parser} -i ${sam} $parser_para 1\>${sam}.parse 2\>${sam}.parse.log >> $tmp_split_parser
+done
 
 ### filter
-perl $parser -i ${out}.sam \
-	-e 60 -m 5 100 --tail 5 100 --gap 10 --insert 100 600 \
-	1> ${out}.parse.sam  2>${out}.parse.log
+xargs --arg-file=$tmp_split_parser --max-proc=$cpus --replace --verbose /bin/sh -c "{}";
+
 if [ $? -eq 1 ]; then
 	echo -e "${RED}ERROR${NC}: Alignment parsing failed." >&2
 	exit;
 fi
+
+rm $tmp_split_parser
+
+### merge
+cat ${bwaout}[0-9]*.parse > ${out}.parse.sam
+perl $aggregator ${bwaout}[0-9]*.parse.log > ${out}.parse.log
+rm ${bwaout}[0-9]*
 
 ### convert SAM to BAM:
 samtools view -@ $cpus -bS ${out}.parse.sam | samtools sort -@ $cpus -o ${out}.bam
@@ -178,5 +210,4 @@ if [ $? -eq 1 ]; then
 	echo -e "${RED}ERROR${NC}: SAMtools index failed." >&2
 	exit;
 fi
-
 

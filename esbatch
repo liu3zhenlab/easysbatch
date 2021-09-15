@@ -91,7 +91,7 @@ if (defined $inlist) {
 } elsif (defined $inpattern) {
 	#$inlist = File::Temp->new(UNLINK => 0, SUFFIX => '.tmp');
 	$inlist = $prefix.".".$timestr.".inlist2sbatch.txt";
-	`find $indir -type f | grep $inpattern > $inlist`;
+	`find -L $indir -type f | grep $inpattern > $inlist`;
 	&message_print("--inlist is generated based on");
 	print STDERR "o --indir $indir\n";
 	print STDERR "o --inpattern $inpattern\n";
@@ -234,8 +234,8 @@ print OUT "#SBATCH --array=1-$list_num\n";
 print OUT "#SBATCH --mem-per-cpu=$mem\n";
 print OUT "#SBATCH --time=$time\n";
 print OUT "#SBATCH --cpus-per-task=$threads\n";
-print OUT "in=\`head -n \$SLURM_ARRAY_TASK_ID $inlist | tail -n 1\`\n";
-
+#print OUT "in=\`head -n \$SLURM_ARRAY_TASK_ID $inlist | tail -n 1\`\n";
+print OUT "in=\`sed -n \$SLURM_ARRAY_TASK_ID\"p\" $inlist\`\n"; 
 ###############################################
 ### input 2 (in2)
 ###############################################

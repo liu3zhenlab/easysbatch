@@ -12,7 +12,7 @@ To submit slurm jobs in an array manner is a good way to management running job 
 ls -1 data/*fastq > fqlist
 esbatch --inlist --cmd gzip --submit
 ```
-*The other way* is to generate the file list and run esbatch at the same time:
+*The other way* is to input the pattern to recognize files and automatically generate the file list for gzip:
 ```
 esbatch --indir data --inpattern fastq$ --cmd gzip --submit
 ```
@@ -22,22 +22,45 @@ sbatch aj.sbatch
 ```
 ### case 2: star alignment
 **task**: to align multiple single-end RNA-Seq datasets to a reference genome and count reads per gene  
-We use `--preset mo_star0_se` to apply preset parameters stored in the parameter file [mo_star0_se.para](lib/mo_star0_se.para). The file can be supplied by using `--presetDB <path>/mo_star0_se.para`. If `--presetDB` is not specified, the program will search `mo_star0_se.para` in the `lib` subdirectory  under the directory containing the main script `esbatch`.
+We use `--preset zm_star0_se.json` to apply preset parameters stored in the parameter file [zm_star0_se.json](libs/zm_star0_se.json).  
 
-Below shows the content of [mo_star0_se.para](lib/mo_star0_se.para), in which information starts form preset and ends with "===".
+Below shows the content of [zm_star0_se.json](libs/zm_star0_se.json).
+
 ```
-preset: mo_star0_se
-mem: 16g
-time: 1-00:00:00
-threads: 4
-inposition: first
-opt4in: --readFilesIn 
-opt4out: --outFileNamePrefix
-in2out: s/[fastq$|fq$]//
-fixPara: --alignIntronMax 3000 --outSAMattrIHstart 0 --outSAMmultNmax 1 ...
-note: STAR alignment for fungal RNA-Seq of fungal strains identical or highly similar to the reference strain
-===
+{
+  "_comment": "preset: zm_star0_se",
+  "_comment": "version: 0.1",
+  "_comment": "STAR alignment for maize RNA-Seq to a low-polymorphism reference",
+  "_comment": "tested on STAR version 2.7.9a_2021-06-25",
+  "mem": "36g",
+  "time": "1-00:00:00",
+  "threads": "8",
+  "inposition": "first",
+  "opt4in": "--readFilesIn", 
+  "opt4out": "--outFileNamePrefix",
+  "in2out": "s/[fastq$|fq$]//"
+  "fixPara": {
+    "_comment": "STAR parameters",
+    "--alignIntronMax": "30000",
+    "--outSAMattrIHstart": "0",
+    "--outSAMmultNmax": "1",
+    "--outSAMstrandField": "intronMotif",
+    "--outFilterIntronMotifs": "RemoveNoncanonicalUnannotated",
+    "--outSAMtype": "BAM SortedByCoordinate", 
+    "--quantMode": "GeneCounts",
+    "--outFilterMismatchNmax": "1",
+    "--outFilterMismatchNoverLmax": "0.01",
+    "--outFilterMatchNmin": "60",
+    "--outSJfilterReads": "Unique",
+    "--outFilterMultimapNmax": "1",
+    "--outFilterMultimapScoreRange": "2",
+    "--outSAMmapqUnique": "60",
+    "--outFilterMatchNminOverLread": "0.98"
+  }
+}
+
 ```
+
 **Note**:
 `in2out` specifies the replacement in an input file to generate an output filename or prefix.
 
@@ -70,10 +93,7 @@ Usage: esbatch --inlist <path_to_input_files> --cmd <command and parater> [optio
       --inpattern* <str>  regular expression pattern to filter files in --indir
                           required if --inlist is not input
       --cmd* <str>        command (e.g., gzip); required
-      --presetDB <file>   file to store preset parameters for one or multiple analyses
-                          see below for an example for one analysis: mo_star0_se
-      --preset <str>      name of a certain analysis in the --presetDB file
-                          for the example case, mo_star0_se should be used
+      --preset <str>      present .json file or name to store preset parameters for an analysis; if the path is included, the file will be automatically searched
       --mem <num>         Gb memory requested (8g)
       --time <time>       running time requested; (1-00:00:00)
       --threads <num>     number of threads (4)
