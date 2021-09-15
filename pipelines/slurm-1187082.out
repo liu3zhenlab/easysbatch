@@ -1,0 +1,12 @@
+[0;31mERROR[0m: Required parameters: -f; -r.
+[0;31mPrerequirement[0m: bwa, samtools
+[0;31mUsage[0m: /var/spool/slurm/d/job1187082/slurm_script -f <fastq> -r <ref> [other options]
+   -f: fastq file; required
+   -r: bwa indexed database; required
+   -1: suffix of first pair of fastq (.R1.pair.fq)
+   -2: suffix of second pair of fastq (.R2.pair.fq)
+   -c: number of cpus (4)
+   -m: modules to load
+   -p: parser script for filtering bwa alignments (/var/spool/slurm/d//utils/samparser.bwa.pl)
+   -a: aggregator script for merging parser log (/var/spool/slurm/d//utils/alignment.log.aggregate.pl)
+   -h: help information

@@ -301,7 +301,7 @@ sub errINF {
       --inpattern* <str>  regular expression pattern to filter files in --indir
                           required if --inlist is not input
       --cmd* <str>        command (e.g., gzip); required
-      --preset <file>     present .json file or name to store preset parameters for an analysis; if the path is included, the file will be automatically searched
+      --preset <file>     preset .json file to store parameters; if the path is not included, it will be searched automatically.
       --mem <num>         Gb memory requested (8g)
       --time <time>       running time requested; (1-00:00:00)
       --threads <num>     number of threads (4)

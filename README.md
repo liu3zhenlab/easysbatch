@@ -68,7 +68,7 @@ Below shows the content of [zm_star0_se.json](libs/zm_star0_se.json).
 #!/bin/bash
 star_cmd=STAR
 star_db=<path-to-STAR-indexed database>
-protocol=mo_star0_se
+protocol=zm_star0_se.json
 fq_dir=<path-to-fastq>
 fq_pattern=.fq$
 esbatch \
@@ -93,7 +93,7 @@ Usage: esbatch --inlist <path_to_input_files> --cmd <command and parater> [optio
       --inpattern* <str>  regular expression pattern to filter files in --indir
                           required if --inlist is not input
       --cmd* <str>        command (e.g., gzip); required
-      --preset <str>      present .json file or name to store preset parameters for an analysis; if the path is included, the file will be automatically searched
+      --preset <str>      preset .json file to store parameters; if the path is not included, it will be searched automatically.
       --mem <num>         Gb memory requested (8g)
       --time <time>       running time requested; (1-00:00:00)
       --threads <num>     number of threads (4)
