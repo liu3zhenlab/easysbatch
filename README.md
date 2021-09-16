@@ -10,7 +10,7 @@ To submit slurm jobs in an array manner is a good way to management running job 
 *One way* is to generate a list of input files and then run esbatch:
 ```
 ls -1 data/*fastq > fqlist
-esbatch --inlist --cmd gzip --submit
+esbatch --inlist fqlist --cmd gzip --submit
 ```
 *The other way* is to input the pattern to recognize files and automatically generate the file list for gzip:
 ```
