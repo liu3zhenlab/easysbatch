@@ -7,6 +7,8 @@ ncpu=16
 mem_gb=2
 prefix=1c_aln
 
+$cmd -v # version
+
 perl /homes/liu3zhen/scripts2/easysbatch/esbatch \
 	--indir $indir \
 	--cmd $cmd \

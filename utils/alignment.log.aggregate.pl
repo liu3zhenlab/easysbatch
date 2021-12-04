@@ -19,6 +19,11 @@ use warnings;
 #maximum length of the gap allowed	5000
 #maximum mapping locations of each read	1
 
+if ($#ARGV < 1) {
+	print STDERR "Parameters of one sample name followed by log files are needed\n";
+	exit;
+}
+
 my $total = 0;
 my $mapped = 0;
 my $confident_mapped = 0;
@@ -45,10 +50,12 @@ foreach my $align_file (sort {$a cmp $b} @ARGV[1..$#ARGV]) {
 #print "\n";
 
 # print alignment statistics:
-print "$ARGV[0]\tTotal reads in the SAM output\t$total\n";
-print "$ARGV[0]\tReads could be mapped\t$mapped\n";
-print "$ARGV[0]\tPassing criteria reads\t$confident_mapped\n";
-print "$ARGV[0]\tUnmapped reads\t$unmapped\n";
+my $dataset = $ARGV[0];
+#$dataset =~ s/\.sam.*//g;
+print "$dataset\tTotal reads in the SAM output\t$total\n";
+print "$dataset\tReads could be mapped\t$mapped\n";
+print "$dataset\tPassing criteria reads\t$confident_mapped\n";
+print "$dataset\tUnmapped reads\t$unmapped\n";
 
 # # print out the criteria:
 # print STDERR "#---- Parse criteria -----\n";
