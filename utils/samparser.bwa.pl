@@ -227,24 +227,24 @@ print STDERR "#minimum mapping score of each read\t$mappingscore\n";
 
 
 sub errINF {
-	print <<EOF;
+    print <<EOF;
 Usage: perl samparser.pl -i [SAM file] [Options]
-	[Options]
-	--input|i:         SAM file
-	--identical|e:     minimum matched and identical base length, default=30bp
-	--mismatches|mm|m: two integers to specify the number of mismatches 
-		               out of the number of basepairs of the matched region of reads; 
-		               (matched regions are not identical regions, mismatch and indel could occur)
-		               e.g., --mm 2 36 represents that <=2 mismatches out of 36 bp
-	--tail:            the maximum bp allowed at each side, two integers to specify the number of tails
-		               out of the number of basepairs of the reads, not including "N", 
-		               e.g., --tail 3 75 represents that <=3 bp tails of 75 bp of reads without "N"
-	--gap:             if a read is split, the internal gap (bp) allowed, default=5000bp
-	--mappingscore:    the minimum mapping score, default=40;
-	--insert:          insert range, e.g., 100 600 (default)
-	--help:            help information
+    [Options]
+    --input|i:         SAM file
+    --identical|e:     minimum matched and identical base length, default=30bp
+    --mismatches|mm|m: two integers to specify the number of mismatches 
+                       out of the number of basepairs of the matched region of reads; 
+                       (matched regions are not identical regions, mismatch and indel could occur
+                       e.g., --mm 2 36 represents that <=2 mismatches out of 36 bp
+    --tail:            the maximum bp allowed at each side, two integers to specify the number of tails
+                       out of the number of basepairs of the reads, not including "N", 
+                       e.g., --tail 3 75 represents that <=3 bp tails of 75 bp of reads without "N"
+    --gap:             if a read is split, the internal gap (bp) allowed, default=5000bp
+    --mappingscore:    the minimum mapping score, default=40;
+    --insert:          insert range, e.g., 100 600 (default)
+    --help:            help information
 EOF
-	exit;
+    exit;
 }
 
 #### subroutines ####

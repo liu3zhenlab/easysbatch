@@ -143,7 +143,7 @@ echo -e "${red}reference db:${nc}" >&2
 echo "    $ref" >&2
 
 ### aln
-bwa mem -t $cpus $ref $fq $fq2 1>${out}.sam 2>${out}.aln.log
+bwa mem -t $cpus -R '@RG\tID:'$out'\tSM:'$out $ref $fq $fq2 1>${out}.sam 2>${out}.aln.log
 if [ $? -eq 1 ]; then
 	echo -e "${RED}ERROR${NC}: BWA alignment failed." >&2
 	rm $new_fq; rm $new_fq2;

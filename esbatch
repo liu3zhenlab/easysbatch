@@ -33,7 +33,7 @@ my $result = &GetOptions(
 			 "inlist=s"    => \$inlist,
 			 "prefix=s"    => \$prefix,
 			 "indir=s"     => \$indir,
-			 "inpattern=s" => \$inpattern,
+			 "inpattern|p=s" => \$inpattern,
 			 "in2=s"       => \$in2,
 			 "opt4in2=s"   => \$opt4in2,
 			 "outdir=s"    => \$outdir,
@@ -302,9 +302,9 @@ sub errINF {
                           required if --inlist is not input
       --cmd* <str>        command (e.g., gzip); required
       --preset <file>     preset .json file to store parameters; if the path is not included, it will be searched automatically.
-      --mem <num>         Gb memory requested (8g)
+      --mem <num>         Gb memory per CPU to be requested (8g)
       --time <time>       running time requested; (1-00:00:00)
-      --threads <num>     number of threads (4)
+      --threads <num>     number of threads (1)
       --prefix <str>      prefix for output (aj)
       --inposition <str>  the position of input parameters relative to other parameters in the command line
                           default is at the second to the last

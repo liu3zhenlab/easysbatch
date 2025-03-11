@@ -1,39 +1,30 @@
 #!/bin/bash
 # by Sanzhen Liu
-# 9/12/2021
+# 7/28/2023
 
 version=0.01;
 
 default_f1suffix='.R1.pair.fq';
 default_f2suffix='.R2.pair.fq';
-default_cpus=16;
-script_dir=`echo $0 | sed 's/[^\/]*\/[^\/]*$//g'` # remove file and the direct subdirectory
-default_parser=$script_dir"/utils/samparser.bwa.pl";
-default_aggregator=$script_dir"/utils/alignment.log.aggregate.pl";
-parser_para="-e 60 -m 4 100 --tail 5 100 --gap 10 --insert 100 800";
-cleanup=0
-skip=0
+default_cpus=4;
+default_parser="/homes/liu3zhen/scripts/sam/samparser.bwa.pl";
 
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 usage() {
 	echo -e "${RED}Prerequirement${NC}: bwa, samtools"
 	echo -e "${RED}Usage${NC}: $0 -f <fastq> -r <ref> [other options]" >&2
-	echo "   -f: fastq file, the first paired fastq if paired-end reads; required" >&2
+	echo "   -f: fastq file; required" >&2
 	echo "   -r: bwa indexed database; required" >&2
 	echo "   -1: suffix of first pair of fastq ($default_f1suffix)" >&2
 	echo "   -2: suffix of second pair of fastq ($default_f2suffix)" >&2
 	echo "   -c: number of cpus ($default_cpus)" >&2
 	echo "   -m: modules to load" >&2
-	echo "   -p: parser script for filtering bwa alignments ($default_parser)" >&2;
-	echo "   -a: aggregator script for merging parser log ($default_aggregator)" >&2;
-	echo "   -d: deletion of SAM output if specified" >&2;
-	echo "   -s: skip generating fastq and alignment" >&2;
-	echo "   -v: version information" >&2;
+	echo "   -p: bwa alignment parser ($default_parser)" >&2;
 	echo "   -h: help information" >&2
 }
 
-while getopts ":f:r:1:2:c:p:m:svdh" opt; do
+while getopts ":f:r:1:2:c:p:m:vh" opt; do
 case $opt in
 	f) fq=$OPTARG;;
 	r) ref=$OPTARG;;
@@ -42,9 +33,6 @@ case $opt in
 	c) cpus=$OPTARG;;
 	p) parser=$OPTARG;;
 	m) modules+=($OPTARG);;
-	a) aggregator=$OPTARG;;
-	d) cleanup=1;;
-	s) skip=1;;
 	v) echo $version; exit;;
 	h) usage; exit;;
 \?) echo "Invalid options: -$OPTARG." >&2; exit;;
@@ -104,24 +92,12 @@ if [ -z $parser ]; then
 	parser=$default_parser;
 fi
 
-if [ -z $aggregator ]; then
-	aggregator=$default_aggregator;
-fi
-
-
 for module in "${modules[@]}"; do
 	module load $module;
 	if [ $? -eq 0 ]; then 
 		echo "module "$module" loaded";
 	fi
 done
-
-###############################################
-# check requirements:
-###############################################
-cmd_check bwa;
-cmd_check samtools;
-file_check $parser;
 
 ###############################################
 # input fastq
@@ -132,18 +108,25 @@ echo "    read 1: "$fq  >&2
 echo "    read 2: "$fq2  >&2
 
 # if fq are gzip files
-fq_extension="${fq##*.}"  # suffix
+fq_extension="${fq##*.}"
 if [ $fq_extension == "gz" ]; then
 	new_fq=`echo $fq | sed 's/.*\///g' | sed 's/.gz//g' | sed 's/^/./g'`;
 	new_fq2=`echo $fq2 | sed 's/.*\///g' | sed 's/.gz//g' | sed 's/^/./g'`;
-	if [ $skip -eq 0 ]; then	
-		gunzip -c $fq > $new_fq
-		gunzip -c $fq2 > $new_fq2
-	fi
+	gunzip -c $fq > $new_fq
+	gunzip -c $fq2 > $new_fq2
 	fq=$new_fq; fq2=$new_fq2
 	new_f1suffix=`echo $fq1suffix | sed 's/.gz//g'`;
 	fq1suffix=$new_fq1suffix;
 fi
+
+
+
+###############################################
+# check requirements:
+###############################################
+cmd_check bwa;
+cmd_check samtools;
+file_check $parser;
 
 ###############################################
 # run and output:
@@ -158,94 +141,41 @@ echo -e "${red}reference db:${nc}" >&2
 echo "    $ref" >&2
 
 ### aln
-bwaout=${out}.sam
 group_info="@RG\tID:${out}\tSM:${out}"
-echo $group_info
-
-if [ $skip -eq 0 ]; then
-	bwa mem -t $cpus -R "$group_info" $ref $fq $fq2 1>${out}.sam 2>${out}.aln.log
-	
-	if [ $? -eq 1 ]; then
-		echo -e "${RED}ERROR${NC}: BWA alignment failed." >&2
-		if [ $fq_extension == "gz" ]; then
-			rm $new_fq; rm $new_fq2;
-		fi
-		exit;
-	fi
-
-	# cleanup
-	if [ $fq_extension == "gz" ]; then
-		rm $new_fq; rm $new_fq2
-	fi
+bwa mem -t $cpus -R "$group_info" $ref $fq $fq2 1>${out}.sam 2>${out}.aln.log
+if [ $? -eq 1 ]; then
+	echo -e "${RED}ERROR${NC}: BWA alignment failed." >&2
+	rm $new_fq; rm $new_fq2;
+	exit;
 fi
 
-# split alignments
-naln=`wc -l ${bwaout} | sed 's/ .*//g'`;
-nlines=`expr $naln / $cpus + 1`;
-split -d -l $nlines ${bwaout} ${bwaout}
+# cleanup
+if [ $fq_extension == "gz" ]; then
+	rm $new_fq; rm $new_fq2
+fi
 
-# tmp
-tmp_split_parser=${bwaout}.split.parse.tmp.sh
-echo "#!/bin/bash" > $tmp_split_parser
-for sam in ${bwaout}[0-9]*[0-9]; do
-	echo -e perl ${parser} -i ${sam} $parser_para 1\>${sam}.parse 2\>${sam}.parse.log >> $tmp_split_parser
-done
 
 ### filter
-xargs --arg-file=$tmp_split_parser --max-proc=$cpus --replace --verbose /bin/sh -c "{}";
-
+perl $parser -i ${out}.sam \
+	-e 90 -m 20 100 --tail 10 100 --gap 50 --insert 100 600 \
+	1> ${out}.parse.sam  2>${out}.parse.log
 if [ $? -eq 1 ]; then
 	echo -e "${RED}ERROR${NC}: Alignment parsing failed." >&2
 	exit;
 fi
 
-rm $tmp_split_parser
-
-### merge log
-#cat ${bwaout}[0-9]*.parse > ${out}.parse.sam
-perl $aggregator ${bwaout} ${bwaout}[0-9]*.parse.log > ${out}.parse.log
-
 ### convert SAM to BAM:
-parse00=1
-for parsesam in ${bwaout}[0-9]*.parse; do
-	parsesam_head=${parsesam}.header
-	if [ $parse00 -eq 1 ]; then
-		samtools view -H $parsesam > ${out}.bam.header
-		samtools view -@ $cpus -bS $parsesam | samtools sort -@ $cpus -o ${parsesam}.bam
-		if [ $? -eq 1 ]; then
-			echo -e "${RED}ERROR${NC}: SAMtools sam2bam conversion failed: $parsesam." >&2
-			exit;
-		fi
-		parse00=0
-	else
-		cat ${out}.bam.header $parsesam > $parsesam_head
-		samtools view -@ $cpus -bS $parsesam_head | samtools sort -@ $cpus -o ${parsesam}.bam
-		rm $parsesam_head
-	
-		if [ $? -eq 1 ]; then
-			echo -e "${RED}ERROR${NC}: SAMtools sam2bam conversion failed: $parsesam." >&2
-			exit;
-		fi
-	fi
-done
+samtools view -@ $cpus -bS ${out}.parse.sam | samtools sort -@ $cpus -o ${out}.bam
+if [ $? -eq 1 ]; then
+	echo -e "${RED}ERROR${NC}: SAMtools sam2bam conversion failed." >&2
+	exit;
+fi
 
-### merge BAM:
-samtools merge ${out}.bam ${bwaout}[0-9]*.parse.bam
-
-### index sorted BAM:
+### Index sorted BAM:
 samtools index -@ $cpus ${out}.bam
 if [ $? -eq 1 ]; then
 	echo -e "${RED}ERROR${NC}: SAMtools index failed." >&2
 	exit;
 fi
 
-# remove temp files
-rm ${out}.bam.header
-rm ${bwaout}[0-9]*
-
-# cleanup if requested
-if [ $cleanup -eq 1 ]; then
-	rm ${out}.sam
-	#rm ${out}.parse.sam
-fi
 

@@ -1,18 +1,19 @@
 {
-	"_comment": "preset: zm_star0_se",
+	"_comment": "preset: star_pe",
 	"_comment": "version: 0.1",
-	"_comment": "STAR alignment for maize RNA-Seq to a low-polymorphism reference",
+	"_comment": "STAR alignment for RNA-Seq to a reference",
 	"_comment": "tested on STAR version 2.7.9a_2021-06-25",
-	"mem": "36g",
+	"mem": "8g",
 	"time": "1-00:00:00",
 	"threads": "8",
 	"inposition": "first",
 	"opt4in": "--readFilesIn", 
 	"opt4out": "--outFileNamePrefix",
-	"in2out": "s/fastq$//; s/fq$//"
+	"in2out": "s/fastq$//; s/fq$//",
 	"fixPara": {
 	"_comment": "STAR parameters",
 		"--alignIntronMax": "30000",
+		"--alignMatesGapMax": "30000",
 		"--outSAMattrIHstart": "0",
 		"--outSAMmultNmax": "1",
 		"--outSAMstrandField": "intronMotif",
@@ -20,12 +21,12 @@
 		"--outSAMtype": "BAM SortedByCoordinate", 
 		"--quantMode": "GeneCounts",
 		"--outFilterMismatchNmax": "1",
-		"--outFilterMismatchNoverLmax": "0.01",
-		"--outFilterMatchNmin": "60",
+		"--outFilterMismatchNoverLmax": "0.04",
+		"--outFilterMatchNmin": "80",
 		"--outSJfilterReads": "Unique",
 		"--outFilterMultimapNmax": "1",
 		"--outFilterMultimapScoreRange": "2",
 		"--outSAMmapqUnique": "60",
-		"--outFilterMatchNminOverLread": "0.98"
+		"--outFilterMatchNminOverLread": "0.96"
 	}
 }

@@ -10,8 +10,8 @@ default_cpus=16;
 script_dir=`echo $0 | sed 's/[^\/]*\/[^\/]*$//g'` # remove file and the direct subdirectory
 default_parser=$script_dir"/utils/samparser.bwa.pl";
 default_aggregator=$script_dir"/utils/alignment.log.aggregate.pl";
-parser_para="-e 60 -m 4 100 --tail 5 100 --gap 10 --insert 100 800";
-cleanup=0
+parser_para="-e 100 -m 3 100 --tail 5 100 --gap 0 --insert 100 800";
+cleanup=1
 skip=0
 
 RED='\033[0;31m'
@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 usage() {
 	echo -e "${RED}Prerequirement${NC}: bwa, samtools"
 	echo -e "${RED}Usage${NC}: $0 -f <fastq> -r <ref> [other options]" >&2
-	echo "   -f: fastq file, the first paired fastq if paired-end reads; required" >&2
+	echo "   -f: fastq file; required" >&2
 	echo "   -r: bwa indexed database; required" >&2
 	echo "   -1: suffix of first pair of fastq ($default_f1suffix)" >&2
 	echo "   -2: suffix of second pair of fastq ($default_f2suffix)" >&2

@@ -2,7 +2,7 @@
 # by Sanzhen Liu
 # 9/12/2021
 
-version=0.01;
+version=0.02;
 
 default_f1suffix='.R1.pair.fq';
 default_f2suffix='.R2.pair.fq';
@@ -10,8 +10,8 @@ default_cpus=16;
 script_dir=`echo $0 | sed 's/[^\/]*\/[^\/]*$//g'` # remove file and the direct subdirectory
 default_parser=$script_dir"/utils/samparser.bwa.pl";
 default_aggregator=$script_dir"/utils/alignment.log.aggregate.pl";
-parser_para="-e 60 -m 4 100 --tail 5 100 --gap 10 --insert 100 800";
-cleanup=0
+parser_para="-e 100 -m 1 100 --tail 1 100 --gap 0 --insert 100 800";
+cleanup=1
 skip=0
 
 RED='\033[0;31m'
@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 usage() {
 	echo -e "${RED}Prerequirement${NC}: bwa, samtools"
 	echo -e "${RED}Usage${NC}: $0 -f <fastq> -r <ref> [other options]" >&2
-	echo "   -f: fastq file, the first paired fastq if paired-end reads; required" >&2
+	echo "   -f: fastq file; required" >&2
 	echo "   -r: bwa indexed database; required" >&2
 	echo "   -1: suffix of first pair of fastq ($default_f1suffix)" >&2
 	echo "   -2: suffix of second pair of fastq ($default_f2suffix)" >&2
@@ -230,7 +230,7 @@ for parsesam in ${bwaout}[0-9]*.parse; do
 done
 
 ### merge BAM:
-samtools merge ${out}.bam ${bwaout}[0-9]*.parse.bam
+samtools merge -f ${out}.bam ${bwaout}[0-9]*.parse.bam
 
 ### index sorted BAM:
 samtools index -@ $cpus ${out}.bam
