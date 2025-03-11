@@ -2,7 +2,7 @@
 scripts and parameter documents for Slurm array submissions
 
 ## Background
-To submit computational jobs in an array manner is a good way to manage jobs on the Slurm system. However, to submit array jobs take time to organize codes and input files. The design of the script "esbatch" is to make the procedure easier. In addition, it is necessary to document parameters for regular analyses so those parameters can be repeatedly and consistently used. Therefore, we develop this easy-sbatch (esbatch) script and prepare parameter documents for regular analyses.  
+To submit computational jobs in an array manner is a good way to manage jobs on the Slurm system. However, to submit array jobs takes time to organize codes and input files. The design of the script "esbatch" is to make the procedure easier. In addition, it is necessary to document parameters for regular analyses so those parameters can be repeatedly and consistently used. Therefore, we develop this easy-sbatch (esbatch) script and prepare parameter documents for regular analyses.  
 
 ## Exampels
 ### case 1: gzip files
