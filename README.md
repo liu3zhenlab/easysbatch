@@ -118,7 +118,7 @@ Usage: esbatch --inlist <path_to_input_files> --cmd <command and parater> [optio
       --help              help information
 ```
 ## BUG REPORT
-Please report any bugs or suggestion on github or by email to Sanzhen Liu (liu3zhen@gmail.com).
+Please report any bugs or suggestion on GitHub or by email to Sanzhen Liu (liu3zhen@gmail.com).
 
 ## LICENSE
 The script and parameter documents are distributed under MIT licence.
